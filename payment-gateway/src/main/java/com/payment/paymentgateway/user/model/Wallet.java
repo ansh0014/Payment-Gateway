@@ -1,4 +1,5 @@
 package com.payment.paymentgateway.user.model;
+
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -10,21 +11,18 @@ import java.time.LocalDateTime;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-
 public class Wallet {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.UUID)
     private String id;
     @OneToOne
-    @JoinColumn(name = "user_id", nullable = false, unique =true)
+    @JoinColumn(name = "user_id", nullable = false, unique = true)
     private User user;
     @Column(nullable = false, precision = 19, scale = 2)
-    private BigDecimal balance;
+    private BigDecimal balance = BigDecimal.ZERO;
     @Column(nullable = false, precision = 19, scale = 2)
-    private BigDecimal reservedBalance=BigDecimal.ZERO;
+    private BigDecimal reservedAmount = BigDecimal.ZERO;
     @Column(nullable = false, updatable = false)
-    private LocalDateTime createdAt=LocalDateTime.now();
-   
-    private LocalDateTime lastUpdated=LocalDateTime.now();
-    
+    private LocalDateTime createdAt = LocalDateTime.now();
+    private LocalDateTime lastUpdated = LocalDateTime.now();
 }

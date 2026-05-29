@@ -58,15 +58,15 @@ public class UserService {
     }
     
     private UserResponse mapToResponse(User user) {
-        return new UserResponse(
-            user.getId(),
-            user.getEmail(),
-            user.getFirstName(),
-            user.getLastName(),
-            user.getPhoneNumber(),
-            user.getRole().toString(),
-            user.getIsActive(),
-            user.getCreatedAt()
-        );
+        UserResponse response = new UserResponse();
+        response.setId(user.getId());
+        response.setEmail(user.getEmail());
+        response.setFirstName(user.getFirstName());
+        response.setLastName(user.getLastName());
+        response.setPhoneNumber(user.getPhoneNumber());
+        response.setRole(user.getRole().toString());
+        response.setIsActive(user.getIsActive());
+        response.setCreatedAt(user.getCreatedAt());
+        return response;
     }
 }

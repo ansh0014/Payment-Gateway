@@ -12,5 +12,9 @@ public class WalletResponse {
  private String id;
  private String userId;
  private BigDecimal balance;
+ private BigDecimal reservedAmount;
+private BigDecimal availableBalance;
+ private LocalDateTime createdAt;
+ private LocalDateTime lastUpdated;
 
 }
