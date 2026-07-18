@@ -1,6 +1,7 @@
 package com.payment.gateway.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.HttpStatusCodeException;
@@ -8,6 +9,7 @@ import org.springframework.web.client.RestTemplate;
 import jakarta.servlet.http.HttpServletRequest;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.time.Duration;
 import java.util.*;
 
 @RestController
@@ -16,6 +18,13 @@ public class GatewayController {
 
     @Autowired
     private RestTemplate restTemplate;
+
+    @Autowired(required = false)
+    private StringRedisTemplate redisTemplate;
+
+  
+    private static final int RATE_LIMIT = 100;
+    private static final String SESSION_PREFIX = "session:";
 
     @RequestMapping(value = {
         "/api/users/**",
@@ -31,8 +40,25 @@ public class GatewayController {
             HttpServletRequest request) throws URISyntaxException {
         
         String path = request.getRequestURI();
-        String query = request.getQueryString();
         
+
+        String clientIp = request.getRemoteAddr();
+        if (!isRateLimitAllowed(clientIp)) {
+            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                    .body("Rate limit exceeded. Maximum 100 requests per minute.".getBytes());
+        }
+
+
+        boolean isAuthRequired = !path.equals("/api/users/register") && !path.equals("/api/users/login");
+        if (isAuthRequired) {
+            String sessionId = request.getHeader("X-Session-ID");
+            if (sessionId == null || !isValidSession(sessionId)) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body("Unauthorized: Invalid or missing X-Session-ID header".getBytes());
+            }
+        }
+
+        String query = request.getQueryString();
         String targetServiceUrl;
         if (path.startsWith("/api/users") || path.startsWith("/api/wallets")) {
             targetServiceUrl = "http://localhost:8081";
@@ -74,5 +100,27 @@ public class GatewayController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(("Gateway Error: " + e.getMessage()).getBytes());
         }
+    }
+
+    private boolean isRateLimitAllowed(String clientIp) {
+        if (redisTemplate == null) {
+            return true; 
+        }
+
+        String key = "ratelimit:" + clientIp + ":" + (System.currentTimeMillis() / 60000);
+        Long currentRequests = redisTemplate.opsForValue().increment(key, 1);
+        if (currentRequests != null && currentRequests == 1) {
+            redisTemplate.expire(key, Duration.ofMinutes(1));
+        }
+        return currentRequests != null && currentRequests <= RATE_LIMIT;
+    }
+
+    private boolean isValidSession(String sessionId) {
+        if (redisTemplate == null) {
+            return true;
+        }
+
+        Boolean hasKey = redisTemplate.hasKey(SESSION_PREFIX + sessionId);
+        return hasKey != null && hasKey;
     }
 }
