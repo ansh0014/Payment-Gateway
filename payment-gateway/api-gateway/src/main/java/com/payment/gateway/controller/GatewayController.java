@@ -1,6 +1,7 @@
 package com.payment.gateway.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
@@ -22,6 +23,21 @@ public class GatewayController {
     @Autowired(required = false)
     private StringRedisTemplate redisTemplate;
 
+    @Value("${user.service.url}")
+    private String userServiceUrl;
+
+    @Value("${payment.service.url}")
+    private String paymentServiceUrl;
+
+    @Value("${transaction.service.url}")
+    private String transactionServiceUrl;
+
+    @Value("${notification.service.url}")
+    private String notificationServiceUrl;
+
+    @Value("${worker.service.url}")
+    private String workerServiceUrl;
+
   
     private static final int RATE_LIMIT = 100;
     private static final String SESSION_PREFIX = "session:";
@@ -40,14 +56,12 @@ public class GatewayController {
             HttpServletRequest request) throws URISyntaxException {
         
         String path = request.getRequestURI();
-        
 
         String clientIp = request.getRemoteAddr();
         if (!isRateLimitAllowed(clientIp)) {
             return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
                     .body("Rate limit exceeded. Maximum 100 requests per minute.".getBytes());
         }
-
 
         boolean isAuthRequired = !path.equals("/api/users/register") && !path.equals("/api/users/login");
         if (isAuthRequired) {
@@ -60,16 +74,17 @@ public class GatewayController {
 
         String query = request.getQueryString();
         String targetServiceUrl;
+        
         if (path.startsWith("/api/users") || path.startsWith("/api/wallets")) {
-            targetServiceUrl = "http://localhost:8081";
+            targetServiceUrl = userServiceUrl;
         } else if (path.startsWith("/api/payments")) {
-            targetServiceUrl = "http://localhost:8082";
+            targetServiceUrl = paymentServiceUrl;
         } else if (path.startsWith("/api/transactions")) {
-            targetServiceUrl = "http://localhost:8083";
+            targetServiceUrl = transactionServiceUrl;
         } else if (path.startsWith("/api/notifications")) {
-            targetServiceUrl = "http://localhost:8084";
+            targetServiceUrl = notificationServiceUrl;
         } else if (path.startsWith("/api/workers")) {
-            targetServiceUrl = "http://localhost:8085";
+            targetServiceUrl = workerServiceUrl;
         } else {
             return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body("Route not found in Gateway".getBytes());
         }
@@ -104,7 +119,7 @@ public class GatewayController {
 
     private boolean isRateLimitAllowed(String clientIp) {
         if (redisTemplate == null) {
-            return true; 
+            return true;
         }
 
         String key = "ratelimit:" + clientIp + ":" + (System.currentTimeMillis() / 60000);
@@ -117,7 +132,7 @@ public class GatewayController {
 
     private boolean isValidSession(String sessionId) {
         if (redisTemplate == null) {
-            return true;
+            return true; 
         }
 
         Boolean hasKey = redisTemplate.hasKey(SESSION_PREFIX + sessionId);
