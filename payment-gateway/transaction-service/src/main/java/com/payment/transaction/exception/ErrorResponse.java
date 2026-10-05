@@ -1,17 +1,36 @@
 package com.payment.transaction.exception;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
 public class ErrorResponse {
     private String message;
     private String error;
     private int status;
     private LocalDateTime timestamp;
     private String path;
+
+    public ErrorResponse() {}
+
+    public ErrorResponse(String message, String error, int status, LocalDateTime timestamp, String path) {
+        this.message = message;
+        this.error = error;
+        this.status = status;
+        this.timestamp = timestamp;
+        this.path = path;
+    }
+
+    public String getMessage() { return message; }
+    public void setMessage(String message) { this.message = message; }
+
+    public String getError() { return error; }
+    public void setError(String error) { this.error = error; }
+
+    public int getStatus() { return status; }
+    public void setStatus(int status) { this.status = status; }
+
+    public LocalDateTime getTimestamp() { return timestamp; }
+    public void setTimestamp(LocalDateTime timestamp) { this.timestamp = timestamp; }
+
+    public String getPath() { return path; }
+    public void setPath(String path) { this.path = path; }
 }

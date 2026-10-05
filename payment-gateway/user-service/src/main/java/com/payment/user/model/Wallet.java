@@ -1,17 +1,11 @@
 package com.payment.user.model;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "wallets")
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
 public class Wallet {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -31,4 +25,34 @@ public class Wallet {
     private LocalDateTime createdAt = LocalDateTime.now();
     
     private LocalDateTime lastUpdated = LocalDateTime.now();
+
+    public Wallet() {}
+
+    public Wallet(String id, User user, BigDecimal balance, BigDecimal reservedAmount, LocalDateTime createdAt, LocalDateTime lastUpdated) {
+        this.id = id;
+        this.user = user;
+        this.balance = balance;
+        this.reservedAmount = reservedAmount;
+        this.createdAt = createdAt;
+        this.lastUpdated = lastUpdated;
+    }
+
+    public String getId() { return id; }
+    public void setId(String id) { this.id = id; }
+
+    public User getUser() { return user; }
+    public void setUser(User user) { this.user = user; }
+
+    public BigDecimal getBalance() { return balance; }
+    public void setBalance(BigDecimal balance) { this.balance = balance; }
+
+    public BigDecimal getReservedAmount() { return reservedAmount; }
+    public void setReservedAmount(BigDecimal reservedAmount) { this.reservedAmount = reservedAmount; }
+
+    public LocalDateTime getCreatedAt() { return createdAt; }
+    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+
+    public LocalDateTime lastUpdated() { return lastUpdated; }
+    public LocalDateTime getLastUpdated() { return lastUpdated; }
+    public void setLastUpdated(LocalDateTime lastUpdated) { this.lastUpdated = lastUpdated; }
 }
