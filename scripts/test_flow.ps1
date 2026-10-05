@@ -1,8 +1,10 @@
-# test_flow.ps1 - Automated End-to-End Integration Test for Windows
+# scripts/test_flow.ps1 - Automated End-to-End Integration Test for Windows
 
-# Load environment variables from .env
-if (Test-Path .env) {
-    Get-Content .env | ForEach-Object {
+$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
+$envPath = if (Test-Path "$scriptDir\..\payment-gateway\.env") { "$scriptDir\..\payment-gateway\.env" } else { "$scriptDir\.env" }
+
+if (Test-Path $envPath) {
+    Get-Content $envPath | ForEach-Object {
         $line = $_.Trim()
         if ($line -and -not $line.StartsWith("#")) {
             $key, $val = $line -split '=', 2
@@ -20,10 +22,6 @@ Write-Host "==========================================================" -Foregro
 Write-Host "          PAYMENT GATEWAY E2E INTEGRATION TEST            " -ForegroundColor Cyan
 Write-Host "==========================================================" -ForegroundColor Cyan
 
-# 1. Setup Test Session in Redis
-Write-Host "1. Setting up test session in Redis..."
-Write-Host "   Make sure you ran: SET session:$TEST_SESSION 'active' in your Upstash Console." -ForegroundColor Yellow
-
 # Wait for Gateway
 Write-Host "Waiting for API Gateway to boot up..." -ForegroundColor Yellow
 $gatewayReady = $false
@@ -38,10 +36,10 @@ while (-not $gatewayReady) {
 }
 Write-Host " Online!" -ForegroundColor Green
 
-# 2. Register User
+# 1. Register User
 $randomId = Get-Random -Minimum 1000 -Maximum 9999
 $email = "anshul_$randomId@test.com"
-Write-Host "2. Registering a new user ($email)..." -ForegroundColor Yellow
+Write-Host "1. Registering a new user ($email)..." -ForegroundColor Yellow
 
 $regBody = @{
     email = $email
@@ -60,8 +58,8 @@ try {
     exit 1
 }
 
-# 3. Credit Wallet
-Write-Host "3. Adding 1000.00 credits to Wallet..." -ForegroundColor Yellow
+# 2. Credit Wallet
+Write-Host "2. Adding 1000.00 credits to Wallet..." -ForegroundColor Yellow
 try {
     $headers = @{ "X-Session-ID" = $TEST_SESSION }
     $creditResponse = Invoke-RestMethod -Uri "$GATEWAY_URL/api/wallets/$userId/credit?amount=1000" -Method Post -Headers $headers
@@ -71,8 +69,8 @@ try {
     exit 1
 }
 
-# 4. Check Initial Balance
-Write-Host "4. Checking initial balance..." -ForegroundColor Yellow
+# 3. Check Initial Balance
+Write-Host "3. Checking initial balance..." -ForegroundColor Yellow
 try {
     $balResponse = Invoke-RestMethod -Uri "$GATEWAY_URL/api/wallets/user/$userId" -Method Get -Headers $headers
     Write-Host "   Initial Wallet Details: Balance = $($balResponse.balance)" -ForegroundColor Green
@@ -81,8 +79,8 @@ try {
     exit 1
 }
 
-# 5. Initiate Payment
-Write-Host "5. Initiating a payment of 250.00..." -ForegroundColor Yellow
+# 4. Initiate Payment
+Write-Host "4. Initiating a payment of 250.00..." -ForegroundColor Yellow
 $payBody = @{
     userId = $userId
     amount = 250.00
@@ -98,12 +96,12 @@ try {
     exit 1
 }
 
-# 6. Wait for Worker Processing
-Write-Host "6. Waiting 6 seconds for background worker to process..." -ForegroundColor Yellow
+# 5. Wait for Worker Processing
+Write-Host "5. Waiting 6 seconds for background worker to process..." -ForegroundColor Yellow
 Start-Sleep -Seconds 6
 
-# 7. Verify Final Balance
-Write-Host "7. Verifying final balance (should be debited by 250.00)..." -ForegroundColor Yellow
+# 6. Verify Final Balance
+Write-Host "6. Verifying final balance (should be debited by 250.00)..." -ForegroundColor Yellow
 try {
     $finalBalResponse = Invoke-RestMethod -Uri "$GATEWAY_URL/api/wallets/user/$userId" -Method Get -Headers $headers
     Write-Host "   Final Wallet Details: Balance = $($finalBalResponse.balance)" -ForegroundColor Green

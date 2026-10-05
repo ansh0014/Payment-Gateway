@@ -1,9 +1,13 @@
 # run_all.ps1 - Launch all microservices natively on Windows
 
+$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
+$projectRoot = if (Test-Path "$scriptDir\payment-gateway\pom.xml") { "$scriptDir\payment-gateway" } elseif (Test-Path "$scriptDir\pom.xml") { $scriptDir } else { "$scriptDir\.." }
+$envPath = if (Test-Path "$projectRoot\.env") { "$projectRoot\.env" } elseif (Test-Path "$scriptDir\.env") { "$scriptDir\.env" } else { "$scriptDir\payment-gateway\.env" }
+
 # Parse .env file and build environment setup script
 $envAssignments = ""
-if (Test-Path .env) {
-    Get-Content .env | ForEach-Object {
+if (Test-Path $envPath) {
+    Get-Content $envPath | ForEach-Object {
         $line = $_.Trim()
         if ($line -and -not $line.StartsWith("#")) {
             $key, $val = $line -split '=', 2
@@ -13,20 +17,18 @@ if (Test-Path .env) {
             }
         }
     }
-    Write-Host "Environment variables parsed successfully!" -ForegroundColor Green
+    Write-Host "Environment variables loaded from $envPath" -ForegroundColor Green
 } else {
-    Write-Error ".env file not found!"
-    exit 1
+    Write-Warning ".env file not found at $envPath"
 }
 
 $services = @("user-service", "payment-service", "transaction-service", "notification-service", "worker-service", "api-gateway")
 
-Write-Host "Launching all microservices..." -ForegroundColor Cyan
+Write-Host "Launching all microservices from $projectRoot..." -ForegroundColor Cyan
 
 foreach ($service in $services) {
     Write-Host "Starting $service in a new window..." -ForegroundColor Yellow
-    # Prepend environment assignments to the command so they are set in the child process
-    $command = "`$Host.UI.RawUI.WindowTitle = '$service'; $envAssignments .\mvnw.cmd spring-boot:run -pl $service"
+    $command = "Set-Location '$projectRoot'; `$Host.UI.RawUI.WindowTitle = '$service'; $envAssignments .\mvnw.cmd spring-boot:run -pl $service"
     Start-Process powershell -ArgumentList "-NoExit", "-Command", $command
 }
 
