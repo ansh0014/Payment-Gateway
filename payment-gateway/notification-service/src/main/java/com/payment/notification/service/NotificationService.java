@@ -5,6 +5,7 @@ import com.payment.notification.model.NotificationType;
 import com.payment.notification.repository.NotificationRepository;
 import com.payment.notification.exception.ResourceNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
@@ -20,14 +21,17 @@ public class NotificationService {
     
     @Autowired
     private RestTemplate restTemplate;
+
+    @Value("${user.service.url}")
+    private String userServiceUrl;
     
     @Transactional
     public void sendPaymentNotification(String paymentId, String userId, NotificationType type, String message) {
         // Query user details from user-service
-        String userServiceUrl = "http://localhost:8081/api/users/" + userId;
+        String userUrl = userServiceUrl + "/api/users/" + userId;
         UserDto user;
         try {
-            user = restTemplate.getForObject(userServiceUrl, UserDto.class);
+            user = restTemplate.getForObject(userUrl, UserDto.class);
         } catch (Exception e) {
             throw new ResourceNotFoundException("User not found via user-service: " + e.getMessage());
         }

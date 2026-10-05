@@ -7,6 +7,7 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.beans.factory.annotation.Value;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.util.concurrent.TimeUnit;
@@ -26,6 +27,9 @@ public class PaymentWorker {
     
     @Autowired
     private ObjectMapper objectMapper;
+
+    @Value("${payment.service.url}")
+    private String paymentServiceUrl;
     
     @Async
     public void worker1ProcessPayments() {
@@ -76,7 +80,7 @@ public class PaymentWorker {
             logger.info("{} processing payment: {}", workerName, paymentMsg.getPaymentId());
             
             // Invoke processing on payment-service REST API
-            String processUrl = "http://localhost:8082/api/payments/" + paymentMsg.getPaymentId() + "/process";
+            String processUrl = paymentServiceUrl + "/api/payments/" + paymentMsg.getPaymentId() + "/process";
             restTemplate.postForObject(processUrl, null, Object.class);
             
             logger.info("{} completed payment: {}", workerName, paymentMsg.getPaymentId());

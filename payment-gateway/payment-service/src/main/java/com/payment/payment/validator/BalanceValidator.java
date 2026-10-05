@@ -2,6 +2,7 @@ package com.payment.payment.validator;
 
 import com.payment.payment.exception.InsufficientBalanceException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 import java.math.BigDecimal;
@@ -11,9 +12,12 @@ public class BalanceValidator {
     
     @Autowired
     private RestTemplate restTemplate;
+
+    @Value("${user.service.url}")
+    private String userServiceUrl;
     
     public boolean validateSufficientBalance(String walletId, BigDecimal amount) {
-        String walletUrl = "http://localhost:8081/api/wallets/" + walletId + "/available-balance";
+        String walletUrl = userServiceUrl + "/api/wallets/" + walletId + "/available-balance";
         BigDecimal availableBalance;
         try {
             availableBalance = restTemplate.getForObject(walletUrl, BigDecimal.class);

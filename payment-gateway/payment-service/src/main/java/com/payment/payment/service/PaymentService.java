@@ -13,6 +13,7 @@ import com.payment.payment.queue.PaymentQueueProducer;
 import com.payment.payment.queue.PaymentQueueMessage;
 import com.payment.payment.exception.ResourceNotFoundException;
 import com.payment.payment.exception.PaymentProcessingException;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -38,13 +39,22 @@ public class PaymentService {
     
     @Autowired
     private RestTemplate restTemplate;
+
+    @Value("${user.service.url}")
+    private String userServiceUrl;
+
+    @Value("${transaction.service.url}")
+    private String transactionServiceUrl;
+
+    @Value("${notification.service.url}")
+    private String notificationServiceUrl;
     
     @Transactional
     public PaymentResponse initiatePayment(PaymentRequest request) {
         // 1. Verify user exists in user-service
-        String userServiceUrl = "http://localhost:8081/api/users/" + request.getUserId();
+        String userUrl = userServiceUrl + "/api/users/" + request.getUserId();
         try {
-            restTemplate.getForObject(userServiceUrl, Object.class);
+            restTemplate.getForObject(userUrl, Object.class);
         } catch (Exception e) {
             throw new ResourceNotFoundException("User not found with ID: " + request.getUserId());
         }
@@ -78,7 +88,7 @@ public class PaymentService {
                 "PAYMENT_PENDING",
                 "Your payment of " + savedPayment.getAmount() + " is initiated and pending. Ref: " + savedPayment.getReferenceNumber()
             );
-            restTemplate.postForObject("http://localhost:8084/api/notifications/send", notifRequest, Void.class);
+            restTemplate.postForObject(notificationServiceUrl + "/api/notifications/send", notifRequest, Void.class);
         } catch (Exception e) {
             System.err.println("Warning: Notification could not be sent: " + e.getMessage());
         }
@@ -102,14 +112,14 @@ public class PaymentService {
             // 1. Debit wallet or invoke bank gateway
             if (payment.getPaymentMethod() == PaymentMethod.WALLET) {
                 // Get wallet ID from user-service
-                String walletUrl = "http://localhost:8081/api/wallets/user/" + payment.getUserId();
+                String walletUrl = userServiceUrl + "/api/wallets/user/" + payment.getUserId();
                 WalletDto wallet = restTemplate.getForObject(walletUrl, WalletDto.class);
                 if (wallet == null) {
                     throw new ResourceNotFoundException("Wallet not found for user: " + payment.getUserId());
                 }
                 
                 // Debit wallet in user-service
-                String debitUrl = "http://localhost:8081/api/wallets/" + wallet.getId() + "/debit?amount=" + payment.getAmount();
+                String debitUrl = userServiceUrl + "/api/wallets/" + wallet.getId() + "/debit?amount=" + payment.getAmount();
                 restTemplate.postForObject(debitUrl, null, Object.class);
             } else if (payment.getPaymentMethod() == PaymentMethod.CARD) {
                 boolean gatewaySuccess = bankGatewayClient.processCardPayment("1111222233334444", "123", payment.getAmount());
@@ -141,7 +151,7 @@ public class PaymentService {
                 "Payment processed: " + payment.getReferenceNumber(),
                 "{\"method\": \"" + payment.getPaymentMethod() + "\"}"
             );
-            restTemplate.postForObject("http://localhost:8083/api/transactions/debit", txnRequest, Object.class);
+            restTemplate.postForObject(transactionServiceUrl + "/api/transactions/debit", txnRequest, Object.class);
             
             // 4. Send success notification via notification-service
             try {
@@ -151,7 +161,7 @@ public class PaymentService {
                     "PAYMENT_SUCCESS",
                     "Your payment of " + payment.getAmount() + " was successful. Ref: " + payment.getReferenceNumber()
                 );
-                restTemplate.postForObject("http://localhost:8084/api/notifications/send", notifRequest, Void.class);
+                restTemplate.postForObject(notificationServiceUrl + "/api/notifications/send", notifRequest, Void.class);
             } catch (Exception e) {
                 System.err.println("Warning: Success notification could not be sent: " + e.getMessage());
             }
@@ -170,7 +180,7 @@ public class PaymentService {
                     "PAYMENT_FAILED",
                     "Your payment of " + payment.getAmount() + " failed. Reason: " + ex.getMessage()
                 );
-                restTemplate.postForObject("http://localhost:8084/api/notifications/send", notifRequest, Void.class);
+                restTemplate.postForObject(notificationServiceUrl + "/api/notifications/send", notifRequest, Void.class);
             } catch (Exception e) {
                 System.err.println("Warning: Failure notification could not be sent: " + e.getMessage());
             }
@@ -225,7 +235,7 @@ public class PaymentService {
                 "PAYMENT_CANCELLED",
                 "Your payment of " + payment.getAmount() + " was cancelled."
             );
-            restTemplate.postForObject("http://localhost:8084/api/notifications/send", notifRequest, Void.class);
+            restTemplate.postForObject(notificationServiceUrl + "/api/notifications/send", notifRequest, Void.class);
         } catch (Exception e) {
             System.err.println("Warning: Cancel notification could not be sent: " + e.getMessage());
         }
